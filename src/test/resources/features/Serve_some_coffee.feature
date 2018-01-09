@@ -6,3 +6,5 @@ Feature:Serve some coffee
     Given I expect a message 'coffees are not sold on Sundays'
     When the date is on Sunday
     And I try to order a coffee
+    
+    Test!!
