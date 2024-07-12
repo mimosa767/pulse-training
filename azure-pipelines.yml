@@ -3,11 +3,10 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-\# Trigger the pipeline on changes to the 'main' branch
+# Trigger the pipeline on changes to the 'main' branch
 trigger:
 - main
 
-# Set up scheduled pipeline runs
 schedules:
   - cron: "0 0 * * *" # Run daily at midnight
     displayName: Daily midnight trigger
@@ -23,7 +22,6 @@ schedules:
         - main # Apply the schedule to the 'main' branch
     always: true # Ensure the schedule runs even if there have been no changes
 
-# Define the job to be executed
 jobs:
   - job: TriggerAPI
     pool:
@@ -88,4 +86,3 @@ jobs:
             } else {
                 # Output a success message after retries
                 Write-Output "API call was successful after $($attempt + 1) attempts."
-
