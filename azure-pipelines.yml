@@ -22,6 +22,9 @@ schedules:
         - main
     always: true # Ensure the schedule runs even if there have been no changes
 
+variables:
+- group: GlobalVariables # Link to the organization variable group
+
 jobs:
   - job: TriggerAPI
     pool:
@@ -95,3 +98,4 @@ jobs:
             } else {
                 # Output a success message after retries
                 Write-Output "API call was successful after $($attempt + 1) attempts."
+            }
