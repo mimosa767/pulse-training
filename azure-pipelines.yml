@@ -12,14 +12,14 @@ schedules:
     displayName: Daily midnight trigger
     branches:
       include:
-        - main # Apply the schedule to the 'main' branch
+        - main
     always: true # Ensure the schedule runs even if there have been no changes
 
   - cron: "0 * * * *" # Run every hour
     displayName: Hourly trigger
     branches:
       include:
-        - main # Apply the schedule to the 'main' branch
+        - main
     always: true # Ensure the schedule runs even if there have been no changes
 
 jobs:
@@ -42,9 +42,14 @@ jobs:
                     [string]$url, # URL parameter for the API endpoint
                     [string]$apiToken # API token parameter for authorization
                 )
-                # Make the API call using the provided URL and token
-                $response = Invoke-RestMethod -Uri $url -Headers @{"Authorization"="Bearer $apiToken"} -Method Get
-                return $response # Return the API response
+                try {
+                    # Make the API call using the provided URL and token
+                    $response = Invoke-RestMethod -Uri $url -Headers @{"Authorization"="Bearer $apiToken"} -Method Get
+                    return $response # Return the API response
+                } catch { # <-- Added closing brace for try-catch block
+                    Write-Error "Error calling API: $_"
+                    throw $_
+                } # <-- Added closing brace for try-catch block
             }
 
             # Set the maximum number of retry attempts
@@ -82,7 +87,9 @@ jobs:
             # Check if all retry attempts failed
             if (-not $success) {
                 # Throw an error if the API call failed after all retries
-                throw "API call failed after $maxRetries attempts."
+                Write-Error "API call failed after $maxRetries attempts."
+                exit 1
             } else {
                 # Output a success message after retries
                 Write-Output "API call was successful after $($attempt + 1) attempts."
+            } # <-- Added closing brace for the else statement
