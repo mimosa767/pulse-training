@@ -31,25 +31,28 @@ jobs:
         inputs:
           targetType: 'inline' # Specify that the PowerShell script is inline
           script: |
-            # Set the API endpoint URL
-            $url = "https://demo.perfectomobile.com/services/executions?operation=execute&scriptKey=PUBLIC:stephenPenn/PreSalesDemo-Android-BioMetricv1-SP.xml"
+            # Define the base API endpoint URL without the security token
+            $baseUrl = "https://demo.perfectomobile.com/services/executions?operation=execute&scriptKey=PUBLIC:stephenPenn/PreSalesDemo-Android-BioMetricv1-SP.xml"
             # Retrieve the API token from the pipeline variables
             $apiToken = "$(API_TOKEN)"
+            # Append the security token to the URL
+            $url = "$baseUrl&securityToken=$apiToken"
 
             # Define a function to call the API
             function Invoke-Api {
                 param (
-                    [string]$url, # URL parameter for the API endpoint
-                    [string]$apiToken # API token parameter for authorization
+                    [string]$url # URL parameter for the API endpoint
                 )
                 try {
-                    # Make the API call using the provided URL and token
-                    $response = Invoke-RestMethod -Uri $url -Headers @{"Authorization"="Bearer $apiToken"} -Method Get
+                    Write-Output "Calling API at $url"
+                    # Make the API call using the provided URL
+                    $response = Invoke-RestMethod -Uri $url -Method Get
+                    Write-Output "API response: $($response | ConvertTo-Json -Depth 10)"
                     return $response # Return the API response
-                } catch { # <-- Added closing brace for try-catch block
+                } catch {
                     Write-Error "Error calling API: $_"
                     throw $_
-                } # <-- Added closing brace for try-catch block
+                }
             }
 
             # Set the maximum number of retry attempts
@@ -65,7 +68,7 @@ jobs:
             while ($attempt -lt $maxRetries -and -not $success) {
                 try {
                     # Call the API using the Invoke-Api function
-                    $response = Invoke-Api -url $url -apiToken $apiToken
+                    $response = Invoke-Api -url $url
                     # Check if the API response indicates success
                     if ($response.Status -eq "Success") {
                         Write-Output "API call succeeded." # Output a success message
@@ -92,4 +95,3 @@ jobs:
             } else {
                 # Output a success message after retries
                 Write-Output "API call was successful after $($attempt + 1) attempts."
-            } # <-- Added closing brace for the else statement
