@@ -1,0 +1,91 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+\# Trigger the pipeline on changes to the 'main' branch
+trigger:
+- main
+
+# Set up scheduled pipeline runs
+schedules:
+  - cron: "0 0 * * *" # Run daily at midnight
+    displayName: Daily midnight trigger
+    branches:
+      include:
+        - main # Apply the schedule to the 'main' branch
+    always: true # Ensure the schedule runs even if there have been no changes
+
+  - cron: "0 * * * *" # Run every hour
+    displayName: Hourly trigger
+    branches:
+      include:
+        - main # Apply the schedule to the 'main' branch
+    always: true # Ensure the schedule runs even if there have been no changes
+
+# Define the job to be executed
+jobs:
+  - job: TriggerAPI
+    pool:
+      vmImage: 'ubuntu-latest' # Use the latest Ubuntu virtual machine image
+    steps:
+      - task: PowerShell@2
+        inputs:
+          targetType: 'inline' # Specify that the PowerShell script is inline
+          script: |
+            # Set the API endpoint URL
+            $url = "https://demo.perfectomobile.com/services/executions?operation=execute&scriptKey=PUBLIC:stephenPenn/PreSalesDemo-Android-BioMetricv1-SP.xml"
+            # Retrieve the API token from the pipeline variables
+            $apiToken = "$(API_TOKEN)"
+
+            # Define a function to call the API
+            function Invoke-Api {
+                param (
+                    [string]$url, # URL parameter for the API endpoint
+                    [string]$apiToken # API token parameter for authorization
+                )
+                # Make the API call using the provided URL and token
+                $response = Invoke-RestMethod -Uri $url -Headers @{"Authorization"="Bearer $apiToken"} -Method Get
+                return $response # Return the API response
+            }
+
+            # Set the maximum number of retry attempts
+            $maxRetries = 5
+            # Set the interval (in seconds) between retries
+            $retryInterval = 60
+            # Initialize the retry attempt counter
+            $attempt = 0
+            # Initialize the success flag
+            $success = $false
+
+            # Loop to retry the API call until success or max retries reached
+            while ($attempt -lt $maxRetries -and -not $success) {
+                try {
+                    # Call the API using the Invoke-Api function
+                    $response = Invoke-Api -url $url -apiToken $apiToken
+                    # Check if the API response indicates success
+                    if ($response.Status -eq "Success") {
+                        Write-Output "API call succeeded." # Output a success message
+                        $success = $true # Set the success flag to true
+                    } else {
+                        # Throw an error if the response status is not "Success"
+                        throw "API call failed with status: $($response.Status)"
+                    }
+                } catch {
+                    # Output a retry message
+                    Write-Output "Attempt $($attempt + 1) failed. Retrying in $retryInterval seconds..."
+                    # Wait for the retry interval before the next attempt
+                    Start-Sleep -Seconds $retryInterval
+                    # Increment the attempt counter
+                    $attempt++
+                }
+            }
+
+            # Check if all retry attempts failed
+            if (-not $success) {
+                # Throw an error if the API call failed after all retries
+                throw "API call failed after $maxRetries attempts."
+            } else {
+                # Output a success message after retries
+                Write-Output "API call was successful after $($attempt + 1) attempts."
+
